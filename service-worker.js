@@ -1,46 +1,79 @@
-/**
- * Check out https://googlechrome.github.io/sw-toolbox/ for
- * more info on how to use sw-toolbox to custom configure your service worker.
- */
+var cacheName = 'weatherPWA-step-6-1';
+var dataCacheName = 'weatherData-v1';
+var filesToCache = [
+  '/',
+  '/index.html',
+  '/scripts/app.js',
+  '/styles/inline.css',
+  '/images/clear.png',
+  '/images/cloudy-scattered-showers.png',
+  '/images/cloudy.png',
+  '/images/fog.png',
+  '/images/ic_add_white_24px.svg',
+  '/images/ic_refresh_white_24px.svg',
+  '/images/partly-cloudy.png',
+  '/images/rain.png',
+  '/images/scattered-showers.png',
+  '/images/sleet.png',
+  '/images/snow.png',
+  '/images/thunderstorm.png',
+  '/images/wind.png'
+];
 
-
-'use strict';
-importScripts('./build/sw-toolbox.js');
-
-const CACHE_APP_SHELL = 'task-cache-app-shell';
-const CACHE_APP_DATA = 'task-cache-app-data';
-
-self.toolbox.options.debug = true;
-
-self.toolbox.options.cache = {
-  name: CACHE_APP_SHELL
-};
-
-// pre-cache our key assets
-self.toolbox.precache(
-  [
-    './build/main.js',
-    './build/main.css',
-    './build/polyfills.js',
-    'index.html',
-    'manifest.json'
-  ]
-);
-
-// for api requests
-self.toolbox.router.any('/*', self.toolbox.networkFirst, {
-  cache: {
-    name: CACHE_APP_DATA
-  },
-  origin: 'https://www.qrgo.com.br'
+self.addEventListener('install', function(e) {
+  console.log('[ServiceWorker] Install');
+  e.waitUntil(
+    caches.open(cacheName).then(function(cache) {
+      console.log('[ServiceWorker] Caching app shell');
+      return cache.addAll(filesToCache);
+    })
+  );
 });
 
-// dynamically cache any other local assets
-self.toolbox.router.any('/*', self.toolbox.cacheFirst);
+self.addEventListener('activate', function(e) {
+  console.log('[ServiceWorker] Activate');
+  e.waitUntil(
+    caches.keys().then(function(keyList) {
+      return Promise.all(keyList.map(function(key) {
+        if (key !== cacheName && key !== dataCacheName) {
+          console.log('[ServiceWorker] Removing old cache', key);
+          return caches.delete(key);
+        }
+      }));
+    })
+  );
+  return self.clients.claim();
+});
 
-// for any other requests go to the network, cache,
-// and then only use that cached resource if your user goes offline
-self.toolbox.router.default = self.toolbox.networkFirst;
-
-self.addEventListener('install', event => event.waitUntil(self.skipWaiting()));
-self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
+self.addEventListener('fetch', function(e) {
+  console.log('[Service Worker] Fetch', e.request.url);
+  var dataUrl = 'https://query.yahooapis.com/v1/public/yql';
+  if (e.request.url.indexOf(dataUrl) > -1) {
+    /*
+     * When the request URL contains dataUrl, the app is asking for fresh
+     * weather data. In this case, the service worker always goes to the
+     * network and then caches the response. This is called the "Cache then
+     * network" strategy:
+     * https://jakearchibald.com/2014/offline-cookbook/#cache-then-network
+     */
+    e.respondWith(
+      caches.open(dataCacheName).then(function(cache) {
+        return fetch(e.request).then(function(response){
+          cache.put(e.request.url, response.clone());
+          return response;
+        });
+      })
+    );
+  } else {
+    /*
+     * The app is asking for app shell files. In this scenario the app uses the
+     * "Cache, falling back to the network" offline strategy:
+     * https://jakearchibald.com/2014/offline-cookbook/#cache-falling-back-to-network
+     */
+    e.respondWith(
+      caches.match(e.request).then(function(response) {
+        return response || fetch(e.request);
+      })
+    );
+  }
+});

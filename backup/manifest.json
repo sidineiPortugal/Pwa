@@ -1,0 +1,23 @@
+{
+  "name": "SidineiPort",
+  "short_name": "SidineiPort",
+  "start_url": "index.html",
+  "display": "standalone",
+  "icons": [{
+    "src": "assets/icon/favicon.ico",
+    "sizes": "48x48",
+    "type": "image/png"
+  },
+  {
+    "src": "assets/icon/favicon.ico",
+    "sizes": "96x96",
+    "type": "image/png"
+  },
+  {
+    "src": "assets/icon/favicon.ico",
+    "sizes": "144x144",
+    "type": "image/png"
+  }],
+  "background_color": "#4e8ef7",
+  "theme_color": "#4e8ef7"
+}
