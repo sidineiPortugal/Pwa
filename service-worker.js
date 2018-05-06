@@ -32,7 +32,7 @@ self.toolbox.router.any('/*', self.toolbox.networkFirst, {
   cache: {
     name: CACHE_APP_DATA
   },
-  origin: 'http://localhost:3000'
+  origin: 'https://www.qrgo.com.br'
 });
 
 // dynamically cache any other local assets
